@@ -1,0 +1,40 @@
+# cd.yml
+
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["ci"]
+    branches: [main]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checked out
+        uses: actions/checkout@v2
+        
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.7.13'
+          architecture: x64
+        
+      - uses: BSFishy/pip-action@v1
+        with:
+          packages: |
+            kfp==1.1.2
+          
+      - name: run pipeline to kubeflow
+        run: python kubeflow_pipeline/pipeline.py
+      
+      - name: Slack Notification
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env: 
+           SLACK_ICON_EMOJI: ':bell:'
+           SLACK_CHANNEL: pre-process-project
+           SLACK_MESSAGE: 'Upload & Run pipeline :rocket: - ${{job.status}}
+           SLACK_USEERNAME: Github
+           SLACK_WEBHOOK: ${{secretes.SLACK_WEBHOOK_URL}}
